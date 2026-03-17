@@ -46,13 +46,15 @@ PARSED FROM THIS MESSAGE: intent=${parsedData.intent}, amount=${parsedData.amoun
 Profile updates made: ${parsedData.updates.length > 0 ? parsedData.updates.join(', ') : 'none'}
 Premium Status: ${profile.isPremium ? 'PRO USER - Give advanced investment and tax advice' : 'FREE USER - Do NOT give specific stock or advanced investment advice. Tell them to upgrade to Pro for personalized investment strategies if they ask.'}`;
 
-    const messages = chatHistory.slice(-6).map(h => ({
+    let messages = chatHistory.slice(-6).map(h => ({
       role: h.role === 'user' ? 'user' : 'model',
       parts: [{ text: h.content }]
     }));
-    
-    // Add current message
-    messages.push({ role: 'user', parts: [{ text: userMsg }] });
+
+    // Gemini API requires the first message to be from the user
+    if (messages.length > 0 && messages[0].role === 'model') {
+      messages.shift();
+    }
 
     try {
       const response = await ai.models.generateContent({

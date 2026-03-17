@@ -43,6 +43,7 @@ export interface UserProfile {
   goals: Goal[];
   riskProfile: 'conservative' | 'moderate' | 'aggressive' | null;
   isPremium?: boolean;
+  onboardingCompleted?: boolean;
   lastUpdated: string | null;
 }
 

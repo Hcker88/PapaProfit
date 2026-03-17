@@ -7,6 +7,7 @@ import { parser } from './parser';
 import { finance } from './finance';
 import { insights } from './insights';
 import { Portfolio } from './components/Portfolio';
+import { OnboardingQuiz } from './components/OnboardingQuiz';
 import { investments } from './investments';
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -18,6 +19,7 @@ const DEFAULT_PROFILE: UserProfile = {
   subscriptions: [],
   goals: [],
   riskProfile: null,
+  onboardingCompleted: false,
   lastUpdated: null
 };
 
@@ -37,15 +39,18 @@ export default function App() {
       setUser(currentUser);
       if (currentUser) {
         await loadProfile(currentUser.uid);
-        // Add welcome message if chat history is empty
-        if (chatHistory.length === 0) {
-          const welcomeMsg = `**Welcome to PapaProfit, ${currentUser.displayName?.split(' ')[0]}! 👋**\n\nI'm your personal AI financial advisor. I understand natural language — just tell me about your finances like you'd tell a friend.\n\n**To get started, try saying:**\n• "I earn ₹75,000 per month"\n• "I have a home loan of ₹25 lakh at 8.5%"\n• "I want to buy a house in 5 years"\n• "I have land worth ₹50 lakh"\n\nThe more you tell me, the smarter my advice gets. Your **Financial Health Score** will update automatically as I learn about you.\n\nWhat would you like to share first?`;
-          setChatHistory([{ role: 'ai', content: welcomeMsg }]);
-        }
       }
     });
     return () => unsubscribe();
   }, []);
+
+  // Add welcome message after profile loads if chat is empty
+  useEffect(() => {
+    if (user && profile.onboardingCompleted && chatHistory.length === 0) {
+      const welcomeMsg = `**Welcome back to PapaProfit, ${user.displayName?.split(' ')[0]}! 👋**\n\nI'm ready to help you manage your finances. Your current net worth is **₹${finance.netWorth(profile).toLocaleString('en-IN')}**.\n\nWhat would you like to focus on today?`;
+      setChatHistory([{ role: 'ai', content: welcomeMsg }]);
+    }
+  }, [user, profile.onboardingCompleted, chatHistory.length]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -171,6 +176,22 @@ export default function App() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  if (!profile.onboardingCompleted) {
+    return (
+      <OnboardingQuiz 
+        profile={profile} 
+        onComplete={(updatedProfile) => {
+          setProfile(updatedProfile);
+          saveProfile(updatedProfile);
+          
+          // Add a personalized welcome message based on their quiz answers
+          const welcomeMsg = `**Welcome to PapaProfit, ${user.displayName?.split(' ')[0]}! 👋**\n\nI've analyzed your initial profile. Your net worth is **₹${finance.netWorth(updatedProfile).toLocaleString('en-IN')}** and your monthly surplus is **₹${finance.surplus(updatedProfile).toLocaleString('en-IN')}**.\n\nI'm your personal AI financial advisor. You can ask me anything about your finances, like:\n• "How can I improve my savings rate?"\n• "I want to buy a house in 5 years"\n• "Should I invest in mutual funds?"\n\nWhat would you like to focus on first?`;
+          setChatHistory([{ role: 'ai', content: welcomeMsg }]);
+        }} 
+      />
     );
   }
 
