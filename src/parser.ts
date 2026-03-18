@@ -146,7 +146,40 @@ export const parser = {
         }
       }
     } catch (e) {
-      console.error("Parsing error", e);
+      console.error("Gemini parsing failed, using regex fallback", e);
+      
+      // Basic Regex Fallback for common patterns
+      const parseNum = (s: string) => {
+        const n = parseFloat(s.replace(/,/g, ''));
+        if (s.toLowerCase().includes('k')) return n * 1000;
+        if (s.toLowerCase().includes('lakh')) return n * 100000;
+        if (s.toLowerCase().includes('cr')) return n * 10000000;
+        return n;
+      };
+
+      const incomeMatch = msg.match(/(?:income|salary|earn|earning)s?\s*(?:is|of|:)?\s*₹?\s*([\d,.]+\s*(?:k|lakh|cr)?)/i);
+      if (incomeMatch) {
+        const val = parseNum(incomeMatch[1]);
+        newProfile.income = val;
+        updates.push('income updated to ' + fmt(val));
+        intent = 'income';
+      }
+
+      const expenseMatch = msg.match(/(?:expense|spend|spending|cost)s?\s*(?:is|of|:)?\s*₹?\s*([\d,.]+\s*(?:k|lakh|cr)?)/i);
+      if (expenseMatch) {
+        const val = parseNum(expenseMatch[1]);
+        newProfile.expenses = val;
+        updates.push('expenses updated to ' + fmt(val));
+        intent = 'expense';
+      }
+
+      const savingsMatch = msg.match(/(?:savings?|saved|bank balance)\s*(?:is|of|:)?\s*₹?\s*([\d,.]+\s*(?:k|lakh|cr)?)/i);
+      if (savingsMatch) {
+        const val = parseNum(savingsMatch[1]);
+        newProfile.savings = val;
+        updates.push('savings updated to ' + fmt(val));
+        intent = 'savings';
+      }
     }
 
     newProfile.lastUpdated = new Date().toISOString();
