@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { UserProfile } from './types';
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyDGBHEI5U8EywOKmHuwFge7cnsLx_3hbhw' });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyCEUFKboU9diiEjsHNKvSW-vdwA8WVDLus' });
 
 export const parser = {
   async parse(msg: string, currentProfile: UserProfile): Promise<{ intent: string; updates: string[]; amount: number; rate: number; months: number; newProfile: UserProfile }> {
