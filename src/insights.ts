@@ -58,7 +58,7 @@ Premium Status: ${profile.isPremium ? 'PRO USER - Give advanced investment and t
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: messages,
         config: {
           systemInstruction: systemCtx,

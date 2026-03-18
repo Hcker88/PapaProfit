@@ -64,7 +64,7 @@ export const parser = {
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Parse the following user message and extract financial data. Convert all amounts to numbers (e.g., '50k' -> 50000, '2 lakh' -> 200000). Message: "${msg}"`,
         config: {
           responseMimeType: 'application/json',

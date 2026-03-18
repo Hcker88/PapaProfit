@@ -144,7 +144,7 @@ export default function App() {
     // 2. Parse message & update profile
     const parsed = await parser.parse(userMsg, profile);
     
-    if (parsed.updates.length > 0) {
+    if (parsed && parsed.updates && parsed.updates.length > 0) {
       setProfile(parsed.newProfile);
       await saveProfile(parsed.newProfile);
     }
@@ -153,7 +153,7 @@ export default function App() {
     setIsTyping(true);
     
     // 4. Generate AI response
-    const reply = await insights.generateResponse(userMsg, parsed, parsed.newProfile, newHistory);
+    const reply = await insights.generateResponse(userMsg, parsed, parsed?.newProfile || profile, newHistory);
     
     // 5. Add AI response
     setIsTyping(false);
