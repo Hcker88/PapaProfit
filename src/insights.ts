@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { UserProfile } from './types';
 import { finance } from './finance';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 export const insights = {
   async generateResponse(userMsg: string, parsedData: any, profile: UserProfile, chatHistory: { role: string; content: string }[]): Promise<string> {
