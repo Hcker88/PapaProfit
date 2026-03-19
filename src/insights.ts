@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { UserProfile } from './types';
 import { finance } from './finance';
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyCEUFKboU9diiEjsHNKvSW-vdwA8WVDLus' });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyDGBHEI5U8EywOKmHuwFge7cnsLx_3hbhw' });
 
 export const insights = {
   async generateResponse(userMsg: string, parsedData: any, profile: UserProfile, chatHistory: { role: string; content: string }[]): Promise<string> {
