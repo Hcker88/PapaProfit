@@ -63,8 +63,7 @@ export const parser = {
               properties: {
                 name: { type: Type.STRING },
                 quantity: { type: Type.NUMBER },
-                buyPrice: { type: Type.NUMBER },
-                value: { type: Type.NUMBER, description: "Total value if quantity/buyPrice not specified" }
+                buyPrice: { type: Type.NUMBER }
               }
             },
             goal: {
@@ -97,7 +96,7 @@ export const parser = {
         3. savings: total current balance
         4. loan: {name, amount, rate} (Total outstanding)
         5. asset: {type: 'property'|'gold'|'cash'|'other', name, value} (Total current value)
-        6. stock: {name, quantity, buyPrice, value} (Use value if quantity/buyPrice not given)
+        6. stock: {name, quantity, buyPrice}
         
         Message: "${msg}"`,
         config: {
@@ -167,23 +166,18 @@ export const parser = {
           amount = data.asset.value;
           updates.push(`${data.asset.name || data.asset.type} worth ${fmt(data.asset.value)} added`);
         }
-        if (data.stock && data.stock.name) {
-          const qty = data.stock.quantity || 1;
-          const price = data.stock.buyPrice || data.stock.value || 0;
-          
-          if (price > 0) {
-            const newStock = {
-              symbol: data.stock.name.toUpperCase(),
-              name: data.stock.name,
-              quantity: qty,
-              buyPrice: price,
-              currentPrice: price
-            };
-            if (!newProfile.assets.stocks) newProfile.assets.stocks = [];
-            newProfile.assets.stocks.push(newStock);
-            amount = qty * price;
-            updates.push(`Stock/Investment ${data.stock.name} added to portfolio`);
-          }
+        if (data.stock && data.stock.name && data.stock.quantity && data.stock.buyPrice) {
+          const newStock = {
+            symbol: data.stock.name.toUpperCase(),
+            name: data.stock.name,
+            quantity: data.stock.quantity,
+            buyPrice: data.stock.buyPrice,
+            currentPrice: data.stock.buyPrice
+          };
+          if (!newProfile.assets.stocks) newProfile.assets.stocks = [];
+          newProfile.assets.stocks.push(newStock);
+          amount = data.stock.quantity * data.stock.buyPrice;
+          updates.push(`Stock ${data.stock.name} added to portfolio`);
         }
         if (data.goal && data.goal.name) {
           const existing = newProfile.goals.find(g => g.name === data.goal.name);

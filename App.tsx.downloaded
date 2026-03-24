@@ -184,19 +184,17 @@ export default function App() {
     
     // 4. Generate AI response or next onboarding question
     let reply = '';
-    const isFrustrated = /beat|shit|fuck|stupid|dumb|annoying|wrong|random/i.test(userMsg);
     const isSkipRequest = /skip|stop|don't ask|dont ask|just chat/i.test(userMsg);
 
-    if ((isSkipRequest || isFrustrated) && !profile.onboardingCompleted) {
+    if (isSkipRequest && !profile.onboardingCompleted) {
       const finalProfile = { ...updatedProfile, onboardingCompleted: true };
       setProfile(finalProfile);
       await saveProfile(finalProfile);
-      reply = isFrustrated 
-        ? "I'm really sorry for being repetitive. I've stopped the guided setup. I'm listening now—tell me exactly what you want to fix or update in your finances."
-        : "Understood! I'll stop the guided setup. We can just chat naturally now. What's on your mind regarding your finances?";
+      reply = "Understood! I'll stop the guided setup. We can just chat naturally now. What's on your mind regarding your finances?";
       setOnboardingStep(0);
-    } else if (!profile.onboardingCompleted && parsed.updates.length === 0 && onboardingStep > 0 && onboardingStep <= ONBOARDING_QUESTIONS.length) {
-      // ONLY use hardcoded questions if the user didn't provide any data (like just saying "hi")
+    } else if (!profile.onboardingCompleted && onboardingStep > 0 && onboardingStep <= ONBOARDING_QUESTIONS.length) {
+      // If they provided an update but it wasn't a skip request, we can still move to next question
+      // OR if they just said "hi/hello" we continue the flow
       if (onboardingStep < ONBOARDING_QUESTIONS.length) {
         reply = ONBOARDING_QUESTIONS[onboardingStep];
         setOnboardingStep(onboardingStep + 1);
@@ -208,11 +206,7 @@ export default function App() {
         setOnboardingStep(0);
       }
     } else {
-      // If they provided data (parsed.updates.length > 0) OR they are already done with onboarding
       reply = await insights.generateResponse(userMsg, parsed, updatedProfile, newHistory);
-      
-      // If they were in onboarding and provided data, we mark it as "making progress"
-      // but we let the AI handle the response so it's not "random"
     }
     
     // 5. Add AI response
