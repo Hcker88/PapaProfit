@@ -286,38 +286,44 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
   const currentStep = steps[step];
 
   return (
-    <div className="fixed inset-0 bg-gray-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-xl">
-        <div className="mb-8">
-          <div className="flex gap-2 mb-6">
+    <div className="fixed inset-0 bg-gray-50/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl max-w-2xl w-full p-10 shadow-2xl border border-gray-100">
+        <div className="mb-10">
+          <div className="flex gap-1.5 mb-8">
             {steps.map((_, i) => (
-              <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-[#1a7a4a]' : 'bg-gray-200'}`} />
+              <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? 'bg-[#1a7a4a]' : 'bg-gray-100'}`} />
             ))}
           </div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 bg-[#f0faf4] text-[#1a7a4a] text-[10px] font-bold uppercase tracking-wider rounded">
-              {currentStep.section}
-            </span>
-            <span className="text-gray-400 text-xs">Step {step + 1} of {steps.length}</span>
+          
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 bg-[#f0faf4] text-[#1a7a4a] text-[10px] font-bold uppercase tracking-widest rounded-md">
+                {currentStep.section}
+              </span>
+              <span className="text-gray-400 text-xs font-medium">Step {step + 1} of {steps.length}</span>
+            </div>
           </div>
-          <h2 className="text-sm font-bold tracking-wider text-gray-500 uppercase mb-1">{currentStep.title}</h2>
-          <h3 className="text-2xl font-semibold text-gray-900 mb-2">{currentStep.question}</h3>
-          <p className="text-gray-500 text-sm">{currentStep.description}</p>
+          
+          <h2 className="text-xs font-bold tracking-[0.2em] text-gray-400 uppercase mb-3">{currentStep.title}</h2>
+          <h3 className="text-3xl font-bold text-gray-900 leading-tight mb-3">{currentStep.question}</h3>
+          <p className="text-gray-500 text-base leading-relaxed">{currentStep.description}</p>
         </div>
 
-        {currentStep.input}
+        <div className="min-h-[120px] flex flex-col justify-center">
+          {currentStep.input}
+        </div>
 
-        <div className="mt-8 flex justify-between items-center">
+        <div className="mt-12 flex justify-between items-center pt-8 border-t border-gray-50">
           <button 
             onClick={() => setStep(Math.max(0, step - 1))}
-            className={`text-gray-500 font-medium px-4 py-2 hover:text-gray-900 ${step === 0 ? 'invisible' : ''}`}
+            className={`text-gray-400 font-semibold text-sm px-6 py-3 rounded-xl hover:text-gray-900 hover:bg-gray-50 transition-all ${step === 0 ? 'invisible' : ''}`}
           >
             Back
           </button>
           <button 
             onClick={handleNext}
             disabled={step === steps.length - 1 && !risk}
-            className="bg-[#1a7a4a] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#145c37] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-[#1a7a4a] text-white px-10 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-green-900/10 hover:bg-[#145c37] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
             {step === steps.length - 1 ? 'Complete Setup' : 'Continue'}
           </button>
