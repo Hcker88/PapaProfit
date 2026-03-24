@@ -1,7 +1,11 @@
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { UserProfile } from './types';
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyDGBHEI5U8EywOKmHuwFge7cnsLx_3hbhw' });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.warn("API Key is missing. Please set VITE_GEMINI_API_KEY in your .env file.");
+}
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export const parser = {
   async parse(msg: string, currentProfile: UserProfile): Promise<{ intent: string; updates: string[]; amount: number; rate: number; months: number; newProfile: UserProfile }> {

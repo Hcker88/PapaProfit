@@ -33,29 +33,29 @@ export function FinancialSourceEditor({ title, sources, onUpdate, type }: Financ
   const fmt = (n: number) => '₹' + n.toLocaleString('en-IN');
 
   return (
-    <div className="mb-6">
-      <div className="flex justify-between items-center mb-3">
-        <h4 className="text-xs font-bold uppercase tracking-widest text-[#1a7a4a]">{title}</h4>
+    <div className="profile-section">
+      <h4 className="flex justify-between items-center">
+        {title}
         <button 
           onClick={() => setIsAdding(!isAdding)}
-          className="text-[10px] font-bold uppercase tracking-wider text-[#1a7a4a] hover:underline"
+          className="text-[10px] font-bold uppercase tracking-wider text-[#1a7a4a] hover:underline bg-transparent border-none cursor-pointer"
         >
-          {isAdding ? 'Cancel' : '+ Add Source'}
+          {isAdding ? 'Cancel' : '+ Add'}
         </button>
-      </div>
+      </h4>
 
-      <div className="space-y-2">
+      <div>
         {sources.map((source, i) => (
-          <div key={i} className="flex justify-between items-center text-sm py-1 border-b border-gray-50 last:border-0">
-            <span className="text-gray-500">{source.name}</span>
+          <div key={i} className="profile-row">
+            <span className="key">{source.name}</span>
             <div className="flex items-center gap-3">
-              <span className="font-semibold text-gray-900">{fmt(source.value)}</span>
-              <button onClick={() => handleRemove(i)} className="text-red-400 hover:text-red-600">✕</button>
+              <span className="val">{fmt(source.value)}</span>
+              <button onClick={() => handleRemove(i)} className="text-red-400 hover:text-red-600 bg-transparent border-none cursor-pointer">✕</button>
             </div>
           </div>
         ))}
         {sources.length === 0 && !isAdding && (
-          <div className="text-xs text-gray-400 italic">No {type} sources added yet.</div>
+          <div className="profile-row"><span className="key" style={{ color: '#ccc' }}>No {type} sources added yet.</span></div>
         )}
       </div>
 
@@ -79,7 +79,7 @@ export function FinancialSourceEditor({ title, sources, onUpdate, type }: Financ
           </div>
           <button 
             onClick={handleAdd}
-            className="w-full bg-[#1a7a4a] text-white text-[10px] font-bold uppercase py-2 rounded-lg hover:bg-[#145c37] transition-colors"
+            className="w-full bg-[#1a7a4a] text-white text-[10px] font-bold uppercase py-2 rounded-lg hover:bg-[#145c37] transition-colors border-none cursor-pointer"
           >
             Confirm Add
           </button>

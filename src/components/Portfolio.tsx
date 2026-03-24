@@ -77,15 +77,15 @@ export function Portfolio({ profile, onUpdate }: PortfolioProps) {
   const fmt = (n: number) => '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Portfolio</h3>
+    <div className="profile-section mt-4 pt-4 border-t border-gray-100">
+      <h4>Stock Portfolio</h4>
       
       {/* Current Portfolio */}
-      <div className="mb-6">
+      <div className="mb-4">
         {(!profile.assets.stocks || profile.assets.stocks.length === 0) ? (
-          <div className="text-sm text-gray-500 italic">No stocks added yet.</div>
+          <div className="profile-row"><span className="key" style={{ color: '#ccc' }}>No stocks added yet.</span></div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {profile.assets.stocks.map((stock, i) => {
               const currentVal = stock.quantity * (stock.currentPrice || stock.buyPrice);
               const invested = stock.quantity * stock.buyPrice;
@@ -93,18 +93,19 @@ export function Portfolio({ profile, onUpdate }: PortfolioProps) {
               const profitPct = (profit / invested) * 100;
               
               return (
-                <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  <div>
-                    <div className="font-semibold text-gray-900">{stock.symbol}</div>
-                    <div className="text-xs text-gray-500">{stock.name}</div>
-                    <div className="text-xs text-gray-500 mt-1">{stock.quantity} shares @ {fmt(stock.buyPrice)}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-gray-900">{fmt(currentVal)}</div>
-                    <div className={`text-xs font-medium ${profit >= 0 ? 'text-[#1a7a4a]' : 'text-[#c0392b]'}`}>
-                      {profit >= 0 ? '+' : ''}{fmt(profit)} ({profit >= 0 ? '+' : ''}{profitPct.toFixed(2)}%)
+                <div key={i} className="profile-row flex-col items-start gap-1">
+                  <div className="flex justify-between w-full">
+                    <span className="key font-semibold text-gray-900">{stock.symbol}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="val">{fmt(currentVal)}</span>
+                      <button onClick={() => removeStock(i)} className="text-red-400 hover:text-red-600 bg-transparent border-none cursor-pointer">✕</button>
                     </div>
-                    <button onClick={() => removeStock(i)} className="text-xs text-red-500 hover:text-red-700 mt-1 underline">Remove</button>
+                  </div>
+                  <div className="flex justify-between w-full text-[11px]">
+                    <span className="text-gray-500">{stock.quantity} @ {fmt(stock.buyPrice)}</span>
+                    <span className={`font-medium ${profit >= 0 ? 'text-[#1a7a4a]' : 'text-[#c0392b]'}`}>
+                      {profit >= 0 ? '+' : ''}{fmt(profit)} ({profit >= 0 ? '+' : ''}{profitPct.toFixed(2)}%)
+                    </span>
                   </div>
                 </div>
               );
@@ -115,7 +116,7 @@ export function Portfolio({ profile, onUpdate }: PortfolioProps) {
 
       {/* Add Stock */}
       <div className="border-t border-gray-100 pt-4">
-        <h4 className="text-sm font-semibold text-gray-700 mb-2">Add Stock</h4>
+        <h4 className="text-xs font-semibold text-gray-700 mb-2">Add Stock</h4>
         
         {!addingStock ? (
           <div className="relative">

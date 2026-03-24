@@ -73,7 +73,7 @@ export default function App() {
   }, [user, profile.onboardingCompleted, chatHistory.length]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [chatHistory, isTyping]);
 
   const loadProfile = async (uid: string) => {
@@ -286,7 +286,7 @@ export default function App() {
           <div className="sidebar-section">
             <div className="sidebar-title">Key Metrics</div>
             <div className="metric-card">
-              <div className="metric-label">Net Worth (Total)</div>
+              <div className="metric-label">Net Worth</div>
               <div className={`metric-value ${nw >= 0 ? 'green' : 'red'}`} title={fmt(nw)}>{fhsScore !== null ? fmt(nw) : '--'}</div>
             </div>
             <div className="metric-card">
@@ -294,11 +294,11 @@ export default function App() {
               <div className={`metric-value ${surplus >= 0 ? 'green' : 'red'}`} title={fmt(surplus)}>{profile.income > 0 ? fmt(surplus) : '--'}</div>
             </div>
             <div className="metric-card">
-              <div className="metric-label">Savings Rate (Monthly)</div>
+              <div className="metric-label">Savings Rate</div>
               <div className={`metric-value ${sr >= 20 ? 'green' : sr >= 10 ? 'amber' : 'red'}`} title={`${sr.toFixed(2)}%`}>{profile.income > 0 ? `${sr.toFixed(1)}%` : '--'}</div>
             </div>
             <div className="metric-card">
-              <div className="metric-label">Debt Ratio (Total/Monthly)</div>
+              <div className="metric-label">Debt Ratio</div>
               <div className={`metric-value ${dr <= 3 ? 'green' : dr <= 6 ? 'amber' : 'red'}`} title={`${dr.toFixed(2)}x`}>{profile.income > 0 ? `${dr.toFixed(1)}x` : '--'}</div>
             </div>
           </div>
@@ -323,34 +323,14 @@ export default function App() {
           <div className="sidebar-section">
             <div className="sidebar-title">Insights</div>
             <div>
-              {nudges.length > 0 ? nudges.map((n, i) => <div key={i} className="nudge">{n}</div>) : <div style={{ fontSize: '13px', color: '#aaa', padding: '4px' }}>Chat to unlock insights</div>}
+              {nudges.length > 0 ? nudges.map((n, i) => <div key={i} className="nudge"><span className="nudge-icon">💡</span> {n.replace(/^[💡⚠️🚨✅]\s*/, '')}</div>) : <div style={{ fontSize: '13px', color: '#aaa', padding: '4px' }}>Chat to unlock insights</div>}
             </div>
           </div>
 
-          <div className="sidebar-section">
-            <div className="sidebar-title">Investment Recommendations</div>
-            {profile.isPremium ? (
-              <div>
-                {recs.length > 0 ? recs.map((r, i) => <div key={i} className="nudge" dangerouslySetInnerHTML={{ __html: formatAIResponse(r) }}></div>) : <div style={{ fontSize: '13px', color: '#aaa', padding: '4px' }}>Add income to get recommendations</div>}
-              </div>
-            ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                <div className="text-2xl mb-2">🔒</div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-1">Premium Feature</h4>
-                <p className="text-xs text-gray-500 mb-3">Upgrade to Pro to unlock personalized investment strategies.</p>
-                <button onClick={() => setShowPremiumModal(true)} className="bg-[#1a7a4a] text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-[#145c37] transition-colors">
-                  Unlock Pro
-                </button>
-              </div>
-            )}
+          <div className="premium-lock">
+            <p>🔒 Advanced analytics, tax optimisation & investment tracking</p>
+            <button className="premium-btn" onClick={() => setShowPremiumModal(true)}>Upgrade to Pro</button>
           </div>
-
-          {!profile.isPremium && (
-            <div className="premium-lock">
-              <p>🔒 Advanced analytics, tax optimisation & investment tracking</p>
-              <button className="premium-btn" onClick={() => setShowPremiumModal(true)}>Upgrade to Pro</button>
-            </div>
-          )}
         </div>
 
         {/* CHAT AREA */}
@@ -385,10 +365,11 @@ export default function App() {
 
           {showSuggestions && (
             <div className="suggestions">
-              <div className="sug" onClick={() => handleSend('My salary is ₹80,000')}>My salary is ₹80,000</div>
-              <div className="sug" onClick={() => handleSend('I spend ₹20,000 on rent')}>I spend ₹20,000 on rent</div>
-              <div className="sug" onClick={() => handleSend('My groceries cost ₹10,000')}>My groceries cost ₹10,000</div>
-              <div className="sug" onClick={() => handleSend('I have ₹5,000 in bills')}>I have ₹5,000 in bills</div>
+              <div className="sug" onClick={() => handleSend('I earn ₹60,000/month')}>I earn ₹60,000/month</div>
+              <div className="sug" onClick={() => handleSend('I have a home loan of ₹20 lakh')}>I have a home loan of ₹20 lakh</div>
+              <div className="sug" onClick={() => handleSend('I want to buy a house in 5 years')}>I want to buy a house in 5 years</div>
+              <div className="sug" onClick={() => handleSend('Should I start a business?')}>Should I start a business?</div>
+              <div className="sug" onClick={() => handleSend('How is my financial health?')}>How is my financial health?</div>
             </div>
           )}
 
@@ -413,29 +394,29 @@ export default function App() {
         <div id="profilePanel" style={{ display: 'block' }}>
           <h3>Financial Profile <button className="close-btn" onClick={() => setShowProfile(false)}>✕</button></h3>
           <div>
+            <FinancialSourceEditor 
+              title="Income Sources" 
+              sources={profile.incomeSources || []} 
+              type="income"
+              onUpdate={(newSources) => {
+                const total = newSources.reduce((acc, s) => acc + s.value, 0);
+                const newProfile = { ...profile, incomeSources: newSources, income: total };
+                setProfile(newProfile);
+                saveProfile(newProfile);
+              }}
+            />
+            <FinancialSourceEditor 
+              title="Expense Categories" 
+              sources={profile.expenseCategories || []} 
+              type="expense"
+              onUpdate={(newSources) => {
+                const total = newSources.reduce((acc, s) => acc + s.value, 0);
+                const newProfile = { ...profile, expenseCategories: newSources, expenses: total };
+                setProfile(newProfile);
+                saveProfile(newProfile);
+              }}
+            />
             <div className="profile-section">
-              <FinancialSourceEditor 
-                title="Income Sources" 
-                sources={profile.incomeSources || []} 
-                type="income"
-                onUpdate={(newSources) => {
-                  const total = newSources.reduce((acc, s) => acc + s.value, 0);
-                  const newProfile = { ...profile, incomeSources: newSources, income: total };
-                  setProfile(newProfile);
-                  saveProfile(newProfile);
-                }}
-              />
-              <FinancialSourceEditor 
-                title="Expense Categories" 
-                sources={profile.expenseCategories || []} 
-                type="expense"
-                onUpdate={(newSources) => {
-                  const total = newSources.reduce((acc, s) => acc + s.value, 0);
-                  const newProfile = { ...profile, expenseCategories: newSources, expenses: total };
-                  setProfile(newProfile);
-                  saveProfile(newProfile);
-                }}
-              />
               <div className="profile-row"><span className="key">Monthly Savings</span><span className="val">{fmt(profile.savings)}</span></div>
             </div>
             <div className="profile-section">

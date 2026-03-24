@@ -2,7 +2,11 @@ import { GoogleGenAI } from '@google/genai';
 import { UserProfile } from './types';
 import { finance } from './finance';
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyDGBHEI5U8EywOKmHuwFge7cnsLx_3hbhw' });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.warn("API Key is missing. Please set VITE_GEMINI_API_KEY in your .env file.");
+}
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export const insights = {
   async generateResponse(userMsg: string, parsedData: any, profile: UserProfile, chatHistory: { role: string; content: string }[]): Promise<string> {
