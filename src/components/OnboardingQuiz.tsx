@@ -8,21 +8,35 @@ interface OnboardingQuizProps {
 
 export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
   const [step, setStep] = useState(0);
-  const [income, setIncome] = useState('');
-  const [expenses, setExpenses] = useState('');
+  
+  // Income states
+  const [salary, setSalary] = useState('');
+  const [bonuses, setBonuses] = useState('');
+  const [sideIncome, setSideIncome] = useState('');
+  
+  // Expense states
+  const [rent, setRent] = useState('');
+  const [groceries, setGroceries] = useState('');
+  const [bills, setBills] = useState('');
+  const [lifestyle, setLifestyle] = useState('');
+  
+  // Other states
   const [savings, setSavings] = useState('');
   const [investments, setInvestments] = useState('');
   const [loans, setLoans] = useState('');
   const [risk, setRisk] = useState<'conservative' | 'moderate' | 'aggressive' | null>(null);
 
   const handleNext = () => {
-    if (step < 5) {
+    if (step < 10) {
       setStep(step + 1);
     } else {
       // Finish onboarding
+      const totalIncome = (parseFloat(salary) || 0) + (parseFloat(bonuses) || 0) + (parseFloat(sideIncome) || 0);
+      const totalExpenses = (parseFloat(rent) || 0) + (parseFloat(groceries) || 0) + (parseFloat(bills) || 0) + (parseFloat(lifestyle) || 0);
+      
       const newProfile = { ...profile };
-      newProfile.income = parseFloat(income) || 0;
-      newProfile.expenses = parseFloat(expenses) || 0;
+      newProfile.income = totalIncome;
+      newProfile.expenses = totalExpenses;
       newProfile.savings = parseFloat(savings) || 0;
       
       const investmentValue = parseFloat(investments) || 0;
@@ -47,18 +61,18 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
 
   const steps = [
     {
-      section: "Cash Flow",
-      title: "Monthly Income",
-      question: "What is your total net monthly income (after tax)?",
-      description: "Include salary, bonuses, and any side income.",
+      section: "Income",
+      title: "Primary Salary",
+      question: "What is your monthly take-home salary?",
+      description: "Your regular monthly income after all deductions.",
       input: (
         <div className="relative mt-4">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
           <input 
             type="number" 
-            value={income} 
-            onChange={(e) => setIncome(e.target.value)} 
-            placeholder="e.g. 75,000"
+            value={salary} 
+            onChange={(e) => setSalary(e.target.value)} 
+            placeholder="e.g. 60,000"
             className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
             autoFocus
           />
@@ -66,18 +80,113 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
       )
     },
     {
-      section: "Cash Flow",
-      title: "Monthly Expenses",
-      question: "What are your average monthly outflows?",
-      description: "Include rent, groceries, bills, and lifestyle spending.",
+      section: "Income",
+      title: "Bonuses & Incentives",
+      question: "What is your average monthly bonus or incentive?",
+      description: "Enter 0 if not applicable.",
       input: (
         <div className="relative mt-4">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
           <input 
             type="number" 
-            value={expenses} 
-            onChange={(e) => setExpenses(e.target.value)} 
-            placeholder="e.g. 40,000"
+            value={bonuses} 
+            onChange={(e) => setBonuses(e.target.value)} 
+            placeholder="e.g. 5,000"
+            className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
+            autoFocus
+          />
+        </div>
+      )
+    },
+    {
+      section: "Income",
+      title: "Side Income",
+      question: "Do you have any other monthly side income?",
+      description: "Freelancing, rentals, or other sources.",
+      input: (
+        <div className="relative mt-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+          <input 
+            type="number" 
+            value={sideIncome} 
+            onChange={(e) => setSideIncome(e.target.value)} 
+            placeholder="e.g. 10,000"
+            className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
+            autoFocus
+          />
+        </div>
+      )
+    },
+    {
+      section: "Expenses",
+      title: "Rent & Housing",
+      question: "What is your monthly rent or home EMI?",
+      description: "Include maintenance or property taxes if applicable.",
+      input: (
+        <div className="relative mt-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+          <input 
+            type="number" 
+            value={rent} 
+            onChange={(e) => setRent(e.target.value)} 
+            placeholder="e.g. 20,000"
+            className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
+            autoFocus
+          />
+        </div>
+      )
+    },
+    {
+      section: "Expenses",
+      title: "Groceries & Food",
+      question: "How much do you spend on groceries and dining out?",
+      description: "Average monthly spend on food and household essentials.",
+      input: (
+        <div className="relative mt-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+          <input 
+            type="number" 
+            value={groceries} 
+            onChange={(e) => setGroceries(e.target.value)} 
+            placeholder="e.g. 8,000"
+            className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
+            autoFocus
+          />
+        </div>
+      )
+    },
+    {
+      section: "Expenses",
+      title: "Utility Bills",
+      question: "What are your average monthly utility bills?",
+      description: "Electricity, water, internet, and mobile.",
+      input: (
+        <div className="relative mt-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+          <input 
+            type="number" 
+            value={bills} 
+            onChange={(e) => setBills(e.target.value)} 
+            placeholder="e.g. 4,000"
+            className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
+            autoFocus
+          />
+        </div>
+      )
+    },
+    {
+      section: "Expenses",
+      title: "Lifestyle & Misc",
+      question: "How much do you spend on lifestyle and leisure?",
+      description: "Shopping, travel, entertainment, and hobbies.",
+      input: (
+        <div className="relative mt-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+          <input 
+            type="number" 
+            value={lifestyle} 
+            onChange={(e) => setLifestyle(e.target.value)} 
+            placeholder="e.g. 8,000"
             className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
             autoFocus
           />
