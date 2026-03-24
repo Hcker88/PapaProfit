@@ -83,14 +83,20 @@ export const parser = {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
-        contents: `Parse the following user message and extract financial data. 
-        Convert all amounts to numbers (e.g., '50k' -> 50000, '2 lakh' -> 200000). 
+        contents: `You are a financial data extractor. Parse the user message and extract ALL financial entities.
         
-        CATEGORIES TO LOOK FOR:
-        - Income: 'Salary', 'Bonus', 'Side Income', 'Business', 'Freelance'
-        - Expenses: 'Rent', 'EMI', 'Groceries', 'Food', 'Bills', 'Electricity', 'Internet', 'Phone', 'Lifestyle', 'Shopping', 'Entertainment'
+        RULES:
+        - Income/Expenses are ALWAYS MONTHLY.
+        - Assets/Loans/Savings are ALWAYS TOTAL/CURRENT BALANCE.
+        - Convert 'k' to 1000, 'lakh' to 100000, 'cr' to 10000000.
         
-        If the user mentions an amount for one of these, put it in the correct array (incomeSources or expenseCategories) with that name.
+        EXTRACT THESE:
+        1. incomeSources: {name, value} (Monthly)
+        2. expenseCategories: {name, value} (Monthly)
+        3. savings: total current balance
+        4. loan: {name, amount, rate} (Total outstanding)
+        5. asset: {type: 'property'|'gold'|'cash'|'other', name, value} (Total current value)
+        6. stock: {name, quantity, buyPrice}
         
         Message: "${msg}"`,
         config: {

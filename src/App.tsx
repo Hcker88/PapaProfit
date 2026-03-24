@@ -280,7 +280,7 @@ export default function App() {
           <div className="sidebar-section">
             <div className="sidebar-title">Key Metrics</div>
             <div className="metric-card">
-              <div className="metric-label">Net Worth</div>
+              <div className="metric-label">Net Worth (Total)</div>
               <div className={`metric-value ${nw >= 0 ? 'green' : 'red'}`} title={fmt(nw)}>{fhsScore !== null ? fmt(nw) : '--'}</div>
             </div>
             <div className="metric-card">
@@ -288,11 +288,11 @@ export default function App() {
               <div className={`metric-value ${surplus >= 0 ? 'green' : 'red'}`} title={fmt(surplus)}>{profile.income > 0 ? fmt(surplus) : '--'}</div>
             </div>
             <div className="metric-card">
-              <div className="metric-label">Savings Rate</div>
+              <div className="metric-label">Savings Rate (Monthly)</div>
               <div className={`metric-value ${sr >= 20 ? 'green' : sr >= 10 ? 'amber' : 'red'}`} title={`${sr.toFixed(2)}%`}>{profile.income > 0 ? `${sr.toFixed(1)}%` : '--'}</div>
             </div>
             <div className="metric-card">
-              <div className="metric-label">Debt Ratio</div>
+              <div className="metric-label">Debt Ratio (Total/Monthly)</div>
               <div className={`metric-value ${dr <= 3 ? 'green' : dr <= 6 ? 'amber' : 'red'}`} title={`${dr.toFixed(2)}x`}>{profile.income > 0 ? `${dr.toFixed(1)}x` : '--'}</div>
             </div>
           </div>
