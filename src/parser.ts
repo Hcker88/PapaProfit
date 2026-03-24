@@ -21,8 +21,26 @@ export const parser = {
         extracted_data: {
           type: Type.OBJECT,
           properties: {
-            income: { type: Type.NUMBER, description: "Monthly income mentioned" },
-            expense: { type: Type.NUMBER, description: "Monthly expense mentioned" },
+            incomeSources: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING, description: "Name of the income source (e.g., 'Salary', 'Bonus', 'Side Income')" },
+                  value: { type: Type.NUMBER, description: "Monthly value" }
+                }
+              }
+            },
+            expenseCategories: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING, description: "Name of the expense category (e.g., 'Rent', 'Groceries', 'Bills', 'Lifestyle')" },
+                  value: { type: Type.NUMBER, description: "Monthly value" }
+                }
+              }
+            },
             savings: { type: Type.NUMBER, description: "Savings amount mentioned" },
             loan: {
               type: Type.OBJECT,
@@ -65,7 +83,16 @@ export const parser = {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
-        contents: `Parse the following user message and extract financial data. Convert all amounts to numbers (e.g., '50k' -> 50000, '2 lakh' -> 200000). Message: "${msg}"`,
+        contents: `Parse the following user message and extract financial data. 
+        Convert all amounts to numbers (e.g., '50k' -> 50000, '2 lakh' -> 200000). 
+        
+        CATEGORIES TO LOOK FOR:
+        - Income: 'Salary', 'Bonus', 'Side Income', 'Business', 'Freelance'
+        - Expenses: 'Rent', 'EMI', 'Groceries', 'Food', 'Bills', 'Electricity', 'Internet', 'Phone', 'Lifestyle', 'Shopping', 'Entertainment'
+        
+        If the user mentions an amount for one of these, put it in the correct array (incomeSources or expenseCategories) with that name.
+        
+        Message: "${msg}"`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: schema,
@@ -78,17 +105,30 @@ export const parser = {
         intent = parsed.intent || 'general';
         const data = parsed.extracted_data || {};
 
-        if (data.income) {
-          newProfile.income = data.income;
-          newProfile.incomeSources = [{ name: 'Primary Income', value: data.income }];
-          amount = data.income;
-          updates.push('income updated to ' + fmt(data.income));
+        if (data.incomeSources && data.incomeSources.length > 0) {
+          data.incomeSources.forEach((source: any) => {
+            const existing = newProfile.incomeSources.find(s => s.name.toLowerCase() === source.name.toLowerCase());
+            if (existing) {
+              existing.value = source.value;
+            } else {
+              newProfile.incomeSources.push(source);
+            }
+            updates.push(`${source.name} updated to ${fmt(source.value)}`);
+          });
+          newProfile.income = newProfile.incomeSources.reduce((acc, s) => acc + s.value, 0);
         }
-        if (data.expense) {
-          newProfile.expenses = data.expense;
-          newProfile.expenseCategories = [{ name: 'General Expenses', value: data.expense }];
-          amount = data.expense;
-          updates.push('expenses updated to ' + fmt(data.expense));
+
+        if (data.expenseCategories && data.expenseCategories.length > 0) {
+          data.expenseCategories.forEach((cat: any) => {
+            const existing = newProfile.expenseCategories.find(c => c.name.toLowerCase() === cat.name.toLowerCase());
+            if (existing) {
+              existing.value = cat.value;
+            } else {
+              newProfile.expenseCategories.push(cat);
+            }
+            updates.push(`${cat.name} updated to ${fmt(cat.value)}`);
+          });
+          newProfile.expenses = newProfile.expenseCategories.reduce((acc, c) => acc + c.value, 0);
         }
         if (data.savings) {
           newProfile.savings = data.savings;

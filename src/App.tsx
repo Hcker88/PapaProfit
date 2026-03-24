@@ -7,7 +7,6 @@ import { parser } from './parser';
 import { finance } from './finance';
 import { insights } from './insights';
 import { Portfolio } from './components/Portfolio';
-import { OnboardingQuiz } from './components/OnboardingQuiz';
 import { FinancialSourceEditor } from './components/FinancialSourceEditor';
 import { investments } from './investments';
 
@@ -36,7 +35,18 @@ export default function App() {
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [onboardingStep, setOnboardingStep] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const ONBOARDING_QUESTIONS = [
+    "Hi! I'm your PapaProfit AI. Let's get your profile set up. First, what's your monthly **Salary**?",
+    "Got it. Do you have any **Bonuses** or other regular income?",
+    "Any **Side Income** (freelance, business, etc.)?",
+    "Now for expenses. How much do you spend on **Rent/Home EMI** monthly?",
+    "What about **Groceries & Food**?",
+    "How much are your monthly **Bills** (Electricity, Internet, Phone, etc.)?",
+    "And finally, what's your typical **Lifestyle Spending** (Shopping, Dining out, Entertainment)?"
+  ];
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -49,11 +59,16 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Add welcome message after profile loads if chat is empty
+  // Add welcome message or start onboarding
   useEffect(() => {
-    if (user && profile.onboardingCompleted && chatHistory.length === 0) {
-      const welcomeMsg = `**Welcome back to PapaProfit, ${user.displayName?.split(' ')[0]}! 👋**\n\nI'm ready to help you manage your finances. Your current net worth is **₹${finance.netWorth(profile).toLocaleString('en-IN')}**.\n\nWhat would you like to focus on today?`;
-      setChatHistory([{ role: 'ai', content: welcomeMsg }]);
+    if (user && chatHistory.length === 0) {
+      if (!profile.onboardingCompleted) {
+        setChatHistory([{ role: 'ai', content: ONBOARDING_QUESTIONS[0] }]);
+        setOnboardingStep(1);
+      } else {
+        const welcomeMsg = `**Welcome back to PapaProfit, ${user.displayName?.split(' ')[0]}! 👋**\n\nI'm ready to help you manage your finances. Your current net worth is **₹${finance.netWorth(profile).toLocaleString('en-IN')}**.\n\nWhat would you like to focus on today?`;
+        setChatHistory([{ role: 'ai', content: welcomeMsg }]);
+      }
     }
   }, [user, profile.onboardingCompleted, chatHistory.length]);
 
@@ -157,16 +172,32 @@ export default function App() {
     // 2. Parse message & update profile
     const parsed = await parser.parse(userMsg, profile);
     
+    let updatedProfile = profile;
     if (parsed && parsed.updates && parsed.updates.length > 0) {
-      setProfile(parsed.newProfile);
-      await saveProfile(parsed.newProfile);
+      updatedProfile = parsed.newProfile;
+      setProfile(updatedProfile);
+      await saveProfile(updatedProfile);
     }
     
     // 3. Show typing indicator
     setIsTyping(true);
     
-    // 4. Generate AI response
-    const reply = await insights.generateResponse(userMsg, parsed, parsed?.newProfile || profile, newHistory);
+    // 4. Generate AI response or next onboarding question
+    let reply = '';
+    if (!profile.onboardingCompleted && onboardingStep > 0 && onboardingStep <= ONBOARDING_QUESTIONS.length) {
+      if (onboardingStep < ONBOARDING_QUESTIONS.length) {
+        reply = ONBOARDING_QUESTIONS[onboardingStep];
+        setOnboardingStep(onboardingStep + 1);
+      } else {
+        const finalProfile = { ...updatedProfile, onboardingCompleted: true };
+        setProfile(finalProfile);
+        await saveProfile(finalProfile);
+        reply = `**Great! Your profile is ready.**\n\nYour net worth is **₹${finance.netWorth(finalProfile).toLocaleString('en-IN')}** and your monthly surplus is **₹${finance.surplus(finalProfile).toLocaleString('en-IN')}**.\n\nYou can see your Financial Health Score in the sidebar. What would you like to focus on first?`;
+        setOnboardingStep(0);
+      }
+    } else {
+      reply = await insights.generateResponse(userMsg, parsed, updatedProfile, newHistory);
+    }
     
     // 5. Add AI response
     setIsTyping(false);
@@ -194,22 +225,6 @@ export default function App() {
           </button>
         </div>
       </div>
-    );
-  }
-
-  if (!profile.onboardingCompleted) {
-    return (
-      <OnboardingQuiz 
-        profile={profile} 
-        onComplete={(updatedProfile) => {
-          setProfile(updatedProfile);
-          saveProfile(updatedProfile);
-          
-          // Add a personalized welcome message based on their quiz answers
-          const welcomeMsg = `**Welcome to PapaProfit, ${user.displayName?.split(' ')[0]}! 👋**\n\nI've analyzed your initial profile. Your net worth is **₹${finance.netWorth(updatedProfile).toLocaleString('en-IN')}** and your monthly surplus is **₹${finance.surplus(updatedProfile).toLocaleString('en-IN')}**.\n\nI'm your personal AI financial advisor. You can ask me anything about your finances, like:\n• "How can I improve my savings rate?"\n• "I want to buy a house in 5 years"\n• "Should I invest in mutual funds?"\n\nWhat would you like to focus on first?`;
-          setChatHistory([{ role: 'ai', content: welcomeMsg }]);
-        }} 
-      />
     );
   }
 
@@ -256,19 +271,19 @@ export default function App() {
             <div className="sidebar-title">Key Metrics</div>
             <div className="metric-card">
               <div className="metric-label">Net Worth</div>
-              <div className={`metric-value ${nw >= 0 ? 'green' : 'red'}`}>{fhsScore !== null ? fmt(nw) : '--'}</div>
+              <div className={`metric-value ${nw >= 0 ? 'green' : 'red'}`} title={fmt(nw)}>{fhsScore !== null ? fmt(nw) : '--'}</div>
             </div>
             <div className="metric-card">
               <div className="metric-label">Monthly Surplus</div>
-              <div className={`metric-value ${surplus >= 0 ? 'green' : 'red'}`}>{profile.income > 0 ? fmt(surplus) : '--'}</div>
+              <div className={`metric-value ${surplus >= 0 ? 'green' : 'red'}`} title={fmt(surplus)}>{profile.income > 0 ? fmt(surplus) : '--'}</div>
             </div>
             <div className="metric-card">
               <div className="metric-label">Savings Rate</div>
-              <div className={`metric-value ${sr >= 20 ? 'green' : sr >= 10 ? 'amber' : 'red'}`}>{profile.income > 0 ? `${sr.toFixed(1)}%` : '--'}</div>
+              <div className={`metric-value ${sr >= 20 ? 'green' : sr >= 10 ? 'amber' : 'red'}`} title={`${sr.toFixed(2)}%`}>{profile.income > 0 ? `${sr.toFixed(1)}%` : '--'}</div>
             </div>
             <div className="metric-card">
               <div className="metric-label">Debt Ratio</div>
-              <div className={`metric-value ${dr <= 3 ? 'green' : dr <= 6 ? 'amber' : 'red'}`}>{profile.income > 0 ? `${dr.toFixed(1)}x` : '--'}</div>
+              <div className={`metric-value ${dr <= 3 ? 'green' : dr <= 6 ? 'amber' : 'red'}`} title={`${dr.toFixed(2)}x`}>{profile.income > 0 ? `${dr.toFixed(1)}x` : '--'}</div>
             </div>
           </div>
 
@@ -354,10 +369,10 @@ export default function App() {
 
           {showSuggestions && (
             <div className="suggestions">
-              <div className="sug" onClick={() => handleSend('I earn ₹60,000/month')}>I earn ₹60,000/month</div>
-              <div className="sug" onClick={() => handleSend('I have a home loan of ₹20 lakh')}>I have a home loan of ₹20 lakh</div>
-              <div className="sug" onClick={() => handleSend('I want to buy a house in 5 years')}>I want to buy a house in 5 years</div>
-              <div className="sug" onClick={() => handleSend('Should I start a business?')}>Should I start a business?</div>
+              <div className="sug" onClick={() => handleSend('My salary is ₹80,000')}>My salary is ₹80,000</div>
+              <div className="sug" onClick={() => handleSend('I spend ₹20,000 on rent')}>I spend ₹20,000 on rent</div>
+              <div className="sug" onClick={() => handleSend('My groceries cost ₹10,000')}>My groceries cost ₹10,000</div>
+              <div className="sug" onClick={() => handleSend('I have ₹5,000 in bills')}>I have ₹5,000 in bills</div>
             </div>
           )}
 
