@@ -80,11 +80,13 @@ export const parser = {
 
         if (data.income) {
           newProfile.income = data.income;
+          newProfile.incomeSources = [{ name: 'Primary Income', value: data.income }];
           amount = data.income;
           updates.push('income updated to ' + fmt(data.income));
         }
         if (data.expense) {
           newProfile.expenses = data.expense;
+          newProfile.expenseCategories = [{ name: 'General Expenses', value: data.expense }];
           amount = data.expense;
           updates.push('expenses updated to ' + fmt(data.expense));
         }

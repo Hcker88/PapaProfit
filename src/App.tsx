@@ -8,11 +8,14 @@ import { finance } from './finance';
 import { insights } from './insights';
 import { Portfolio } from './components/Portfolio';
 import { OnboardingQuiz } from './components/OnboardingQuiz';
+import { FinancialSourceEditor } from './components/FinancialSourceEditor';
 import { investments } from './investments';
 
 const DEFAULT_PROFILE: UserProfile = {
   income: 0,
+  incomeSources: [],
   expenses: 0,
+  expenseCategories: [],
   savings: 0,
   loans: [],
   assets: { property: [], gold: 0, cash: 0, stocks: [], crypto: [], other: [] },
@@ -380,10 +383,29 @@ export default function App() {
           <h3>Financial Profile <button className="close-btn" onClick={() => setShowProfile(false)}>✕</button></h3>
           <div>
             <div className="profile-section">
-              <h4>Income & Expenses</h4>
-              <div className="profile-row"><span className="key">Monthly Income</span><span className="val">{fmt(profile.income)}</span></div>
-              <div className="profile-row"><span className="key">Monthly Expenses</span><span className="val">{fmt(profile.expenses)}</span></div>
-              <div className="profile-row"><span className="key">Savings</span><span className="val">{fmt(profile.savings)}</span></div>
+              <FinancialSourceEditor 
+                title="Income Sources" 
+                sources={profile.incomeSources || []} 
+                type="income"
+                onUpdate={(newSources) => {
+                  const total = newSources.reduce((acc, s) => acc + s.value, 0);
+                  const newProfile = { ...profile, incomeSources: newSources, income: total };
+                  setProfile(newProfile);
+                  saveProfile(newProfile);
+                }}
+              />
+              <FinancialSourceEditor 
+                title="Expense Categories" 
+                sources={profile.expenseCategories || []} 
+                type="expense"
+                onUpdate={(newSources) => {
+                  const total = newSources.reduce((acc, s) => acc + s.value, 0);
+                  const newProfile = { ...profile, expenseCategories: newSources, expenses: total };
+                  setProfile(newProfile);
+                  saveProfile(newProfile);
+                }}
+              />
+              <div className="profile-row"><span className="key">Monthly Savings</span><span className="val">{fmt(profile.savings)}</span></div>
             </div>
             <div className="profile-section">
               <h4>Assets ({fmt(finance.totalAssets(profile))})</h4>

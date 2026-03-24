@@ -26,9 +26,16 @@ export interface Stock {
   currentPrice?: number;
 }
 
+export interface FinancialSource {
+  name: string;
+  value: number;
+}
+
 export interface UserProfile {
   income: number;
+  incomeSources: FinancialSource[];
   expenses: number;
+  expenseCategories: FinancialSource[];
   savings: number;
   loans: Loan[];
   assets: {

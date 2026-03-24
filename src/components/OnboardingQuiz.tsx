@@ -31,12 +31,27 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
       setStep(step + 1);
     } else {
       // Finish onboarding
-      const totalIncome = (parseFloat(salary) || 0) + (parseFloat(bonuses) || 0) + (parseFloat(sideIncome) || 0);
-      const totalExpenses = (parseFloat(rent) || 0) + (parseFloat(groceries) || 0) + (parseFloat(bills) || 0) + (parseFloat(lifestyle) || 0);
+      const incomeSources = [
+        { name: 'Salary', value: parseFloat(salary) || 0 },
+        { name: 'Bonuses', value: parseFloat(bonuses) || 0 },
+        { name: 'Side Income', value: parseFloat(sideIncome) || 0 }
+      ].filter(s => s.value > 0);
+      
+      const expenseCategories = [
+        { name: 'Rent/Housing', value: parseFloat(rent) || 0 },
+        { name: 'Groceries/Food', value: parseFloat(groceries) || 0 },
+        { name: 'Utility Bills', value: parseFloat(bills) || 0 },
+        { name: 'Lifestyle/Misc', value: parseFloat(lifestyle) || 0 }
+      ].filter(e => e.value > 0);
+
+      const totalIncome = incomeSources.reduce((acc, s) => acc + s.value, 0);
+      const totalExpenses = expenseCategories.reduce((acc, e) => acc + e.value, 0);
       
       const newProfile = { ...profile };
       newProfile.income = totalIncome;
+      newProfile.incomeSources = incomeSources;
       newProfile.expenses = totalExpenses;
+      newProfile.expenseCategories = expenseCategories;
       newProfile.savings = parseFloat(savings) || 0;
       
       const investmentValue = parseFloat(investments) || 0;
