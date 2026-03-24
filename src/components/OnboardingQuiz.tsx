@@ -11,11 +11,12 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
   const [income, setIncome] = useState('');
   const [expenses, setExpenses] = useState('');
   const [savings, setSavings] = useState('');
+  const [investments, setInvestments] = useState('');
   const [loans, setLoans] = useState('');
   const [risk, setRisk] = useState<'conservative' | 'moderate' | 'aggressive' | null>(null);
 
   const handleNext = () => {
-    if (step < 4) {
+    if (step < 5) {
       setStep(step + 1);
     } else {
       // Finish onboarding
@@ -23,15 +24,22 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
       newProfile.income = parseFloat(income) || 0;
       newProfile.expenses = parseFloat(expenses) || 0;
       newProfile.savings = parseFloat(savings) || 0;
-      newProfile.assets = { ...profile.assets, cash: parseFloat(savings) || 0 };
+      
+      const investmentValue = parseFloat(investments) || 0;
+      newProfile.assets = { 
+        ...profile.assets, 
+        cash: parseFloat(savings) || 0,
+        other: investmentValue > 0 ? [{ name: 'Existing Investments', value: investmentValue }] : []
+      };
       
       const loanAmount = parseFloat(loans) || 0;
       if (loanAmount > 0) {
-        newProfile.loans = [{ name: 'Personal Loan', amount: loanAmount, rate: 10, emi: 0 }];
+        newProfile.loans = [{ name: 'Existing Loans', amount: loanAmount, rate: 10, emi: 0 }];
       }
       
       newProfile.riskProfile = risk;
       newProfile.onboardingCompleted = true;
+      newProfile.lastUpdated = new Date().toISOString();
       
       onComplete(newProfile);
     }
@@ -39,8 +47,10 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
 
   const steps = [
     {
-      title: "Let's get your baseline.",
-      question: "What is your approximate monthly income?",
+      section: "Cash Flow",
+      title: "Monthly Income",
+      question: "What is your total net monthly income (after tax)?",
+      description: "Include salary, bonuses, and any side income.",
       input: (
         <div className="relative mt-4">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
@@ -48,7 +58,7 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
             type="number" 
             value={income} 
             onChange={(e) => setIncome(e.target.value)} 
-            placeholder="e.g. 75000"
+            placeholder="e.g. 75,000"
             className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
             autoFocus
           />
@@ -56,8 +66,10 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
       )
     },
     {
-      title: "Tracking your outflows.",
-      question: "What are your average monthly expenses?",
+      section: "Cash Flow",
+      title: "Monthly Expenses",
+      question: "What are your average monthly outflows?",
+      description: "Include rent, groceries, bills, and lifestyle spending.",
       input: (
         <div className="relative mt-4">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
@@ -65,7 +77,7 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
             type="number" 
             value={expenses} 
             onChange={(e) => setExpenses(e.target.value)} 
-            placeholder="e.g. 40000"
+            placeholder="e.g. 40,000"
             className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
             autoFocus
           />
@@ -73,8 +85,10 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
       )
     },
     {
-      title: "Your safety net.",
-      question: "How much cash/savings do you currently have?",
+      section: "Assets",
+      title: "Liquid Savings",
+      question: "How much cash do you have in savings/bank accounts?",
+      description: "This is your immediate safety net.",
       input: (
         <div className="relative mt-4">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
@@ -82,7 +96,7 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
             type="number" 
             value={savings} 
             onChange={(e) => setSavings(e.target.value)} 
-            placeholder="e.g. 150000"
+            placeholder="e.g. 1,50,000"
             className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
             autoFocus
           />
@@ -90,8 +104,29 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
       )
     },
     {
-      title: "Managing liabilities.",
-      question: "Do you have any outstanding loans? (Enter total amount, or 0)",
+      section: "Assets",
+      title: "Investments",
+      question: "What is the current value of your other investments?",
+      description: "Stocks, Mutual Funds, Gold, FDs, etc.",
+      input: (
+        <div className="relative mt-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+          <input 
+            type="number" 
+            value={investments} 
+            onChange={(e) => setInvestments(e.target.value)} 
+            placeholder="e.g. 3,00,000"
+            className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
+            autoFocus
+          />
+        </div>
+      )
+    },
+    {
+      section: "Liabilities",
+      title: "Outstanding Debt",
+      question: "What is your total outstanding loan/debt amount?",
+      description: "Enter 0 if you are debt-free.",
       input: (
         <div className="relative mt-4">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
@@ -99,7 +134,7 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
             type="number" 
             value={loans} 
             onChange={(e) => setLoans(e.target.value)} 
-            placeholder="e.g. 500000"
+            placeholder="e.g. 5,00,000"
             className="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-[#1a7a4a] focus:outline-none transition-colors"
             autoFocus
           />
@@ -107,8 +142,10 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
       )
     },
     {
-      title: "Investment style.",
-      question: "How would you describe your risk appetite?",
+      section: "Strategy",
+      title: "Risk Appetite",
+      question: "How would you describe your investment style?",
+      description: "This helps us tailor your portfolio recommendations.",
       input: (
         <div className="flex flex-col gap-3 mt-4">
           <button 
@@ -148,8 +185,15 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
               <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-[#1a7a4a]' : 'bg-gray-200'}`} />
             ))}
           </div>
-          <h2 className="text-sm font-bold tracking-wider text-[#1a7a4a] uppercase mb-2">{currentStep.title}</h2>
-          <h3 className="text-2xl font-semibold text-gray-900">{currentStep.question}</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-2 py-0.5 bg-[#f0faf4] text-[#1a7a4a] text-[10px] font-bold uppercase tracking-wider rounded">
+              {currentStep.section}
+            </span>
+            <span className="text-gray-400 text-xs">Step {step + 1} of {steps.length}</span>
+          </div>
+          <h2 className="text-sm font-bold tracking-wider text-gray-500 uppercase mb-1">{currentStep.title}</h2>
+          <h3 className="text-2xl font-semibold text-gray-900 mb-2">{currentStep.question}</h3>
+          <p className="text-gray-500 text-sm">{currentStep.description}</p>
         </div>
 
         {currentStep.input}
@@ -163,7 +207,7 @@ export function OnboardingQuiz({ profile, onComplete }: OnboardingQuizProps) {
           </button>
           <button 
             onClick={handleNext}
-            disabled={step === 4 && !risk}
+            disabled={step === steps.length - 1 && !risk}
             className="bg-[#1a7a4a] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#145c37] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {step === steps.length - 1 ? 'Complete Setup' : 'Continue'}
