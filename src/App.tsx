@@ -184,7 +184,17 @@ export default function App() {
     
     // 4. Generate AI response or next onboarding question
     let reply = '';
-    if (!profile.onboardingCompleted && onboardingStep > 0 && onboardingStep <= ONBOARDING_QUESTIONS.length) {
+    const isSkipRequest = /skip|stop|don't ask|dont ask|just chat/i.test(userMsg);
+
+    if (isSkipRequest && !profile.onboardingCompleted) {
+      const finalProfile = { ...updatedProfile, onboardingCompleted: true };
+      setProfile(finalProfile);
+      await saveProfile(finalProfile);
+      reply = "Understood! I'll stop the guided setup. We can just chat naturally now. What's on your mind regarding your finances?";
+      setOnboardingStep(0);
+    } else if (!profile.onboardingCompleted && onboardingStep > 0 && onboardingStep <= ONBOARDING_QUESTIONS.length) {
+      // If they provided an update but it wasn't a skip request, we can still move to next question
+      // OR if they just said "hi/hello" we continue the flow
       if (onboardingStep < ONBOARDING_QUESTIONS.length) {
         reply = ONBOARDING_QUESTIONS[onboardingStep];
         setOnboardingStep(onboardingStep + 1);
