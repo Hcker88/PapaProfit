@@ -38,6 +38,8 @@ export default function App() {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const apiKeyMissing = !(import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY);
+
   const ONBOARDING_QUESTIONS = [
     "Hi! I'm your PapaProfit AI. Let's get your profile set up. First, what's your monthly **Salary**?",
     "Got it. Do you have any **Bonuses** or other regular income?",
@@ -141,12 +143,16 @@ export default function App() {
   };
 
   const formatAIResponse = (text: string) => {
+    if (!text) return '';
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n\n/g, '<br><br>')
-      .replace(/\n/g, '<br>')
-      .replace(/^• /gm, '&bull; ')
-      .replace(/^\d+\. /gm, m => m);
+      .replace(/\n\n/g, '<br/><br/>')
+      .replace(/\n/g, '<br/>')
+      .replace(/### (.*?)/g, '<span class="section-head">$1</span>')
+      .replace(/## (.*?)/g, '<span class="section-head">$1</span>')
+      .replace(/# (.*?)/g, '<span class="section-head">$1</span>')
+      .replace(/• (.*?)/g, '&bull; $1')
+      .replace(/- (.*?)/g, '&bull; $1');
   };
 
   const fmt = (n: number) => {
@@ -184,7 +190,7 @@ export default function App() {
     
     // 4. Generate AI response or next onboarding question
     let reply = '';
-    const isFrustrated = /beat|shit|fuck|stupid|dumb|annoying|wrong|random/i.test(userMsg);
+    const isFrustrated = /beat|shit|fuck|stupid|dumb|annoying|wrong|random|niga|bs|listening/i.test(userMsg);
     const isSkipRequest = /skip|stop|don't ask|dont ask|just chat/i.test(userMsg);
 
     if ((isSkipRequest || isFrustrated) && !profile.onboardingCompleted) {
@@ -195,24 +201,21 @@ export default function App() {
         ? "I'm really sorry for being repetitive. I've stopped the guided setup. I'm listening now—tell me exactly what you want to fix or update in your finances."
         : "Understood! I'll stop the guided setup. We can just chat naturally now. What's on your mind regarding your finances?";
       setOnboardingStep(0);
-    } else if (!profile.onboardingCompleted && parsed.updates.length === 0 && onboardingStep > 0 && onboardingStep <= ONBOARDING_QUESTIONS.length) {
-      // ONLY use hardcoded questions if the user didn't provide any data (like just saying "hi")
-      if (onboardingStep < ONBOARDING_QUESTIONS.length) {
-        reply = ONBOARDING_QUESTIONS[onboardingStep];
-        setOnboardingStep(onboardingStep + 1);
-      } else {
-        const finalProfile = { ...updatedProfile, onboardingCompleted: true };
-        setProfile(finalProfile);
-        await saveProfile(finalProfile);
-        reply = `**Great! Your profile is ready.**\n\nYour net worth is **₹${finance.netWorth(finalProfile).toLocaleString('en-IN')}** and your monthly surplus is **₹${finance.surplus(finalProfile).toLocaleString('en-IN')}**.\n\nYou can see your Financial Health Score in the sidebar. What would you like to focus on first?`;
-        setOnboardingStep(0);
-      }
     } else {
-      // If they provided data (parsed.updates.length > 0) OR they are already done with onboarding
-      reply = await insights.generateResponse(userMsg, parsed, updatedProfile, newHistory);
+      // Use AI for everything now
+      reply = await insights.generateResponse(userMsg, parsed, updatedProfile, newHistory, onboardingStep, ONBOARDING_QUESTIONS);
       
-      // If they were in onboarding and provided data, we mark it as "making progress"
-      // but we let the AI handle the response so it's not "random"
+      // If the user provided data that matched the current onboarding step, we increment it
+      if (parsed.updates.length > 0 && !profile.onboardingCompleted) {
+        if (onboardingStep < ONBOARDING_QUESTIONS.length) {
+          setOnboardingStep(onboardingStep + 1);
+        } else {
+          const finalProfile = { ...updatedProfile, onboardingCompleted: true };
+          setProfile(finalProfile);
+          await saveProfile(finalProfile);
+          setOnboardingStep(0);
+        }
+      }
     }
     
     // 5. Add AI response
@@ -258,6 +261,12 @@ export default function App() {
       <div className="topbar">
         <div className="topbar-logo">PapaProfit</div>
         <div className="topbar-right">
+          {apiKeyMissing && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1">
+              <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+              API Key Missing
+            </div>
+          )}
           <div className="fhs-badge" onClick={() => setShowProfile(!showProfile)}>
             <div className="fhs-dot" style={{ background: fhsInfo.cls === 'good' ? '#1a7a4a' : fhsInfo.cls === 'ok' ? '#d4851a' : '#c0392b' }}></div>
             <span>FHS: <strong>{fhsScore !== null ? fhsScore : '--'}</strong></span>
@@ -373,6 +382,16 @@ export default function App() {
             </div>
           )}
 
+          {chatHistory.length > 0 && !profile.onboardingCompleted && (
+            <div className="px-6 py-2 flex justify-end">
+              <button 
+                onClick={() => handleSend("skip setup")}
+                className="text-[10px] text-gray-400 hover:text-gray-600 underline"
+              >
+                Skip guided setup
+              </button>
+            </div>
+          )}
           <div className="chat-input-wrap">
             <div className="chat-input-row">
               <input 

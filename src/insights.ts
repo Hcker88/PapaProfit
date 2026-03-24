@@ -9,7 +9,7 @@ if (!apiKey) {
 const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export const insights = {
-  async generateResponse(userMsg: string, parsedData: any, profile: UserProfile, chatHistory: { role: string; content: string }[]): Promise<string> {
+  async generateResponse(userMsg: string, parsedData: any, profile: UserProfile, chatHistory: { role: string; content: string }[], onboardingStep?: number, onboardingQuestions?: string[]): Promise<string> {
     const fhsScore = finance.fhs(profile);
     const fhsInfo = finance.fhsLabel(fhsScore);
     const collateral = profile.assets.property.find(a => a.mortgageable);
@@ -17,12 +17,19 @@ export const insights = {
 
     const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
+    const onboardingCtx = onboardingStep && onboardingQuestions && onboardingStep < onboardingQuestions.length
+      ? `\nONBOARDING STATUS: The user is currently in a guided setup. The next thing we need to know is: "${onboardingQuestions[onboardingStep]}". 
+         If the user is just chatting or being casual (like saying "hi"), acknowledge them warmly and then naturally ask the next onboarding question. 
+         DO NOT be a robot. Be a real advisor.`
+      : "";
+
     const systemCtx = `You are PapaProfit — a sharp, warm, and direct personal financial advisor for Indian users. 
 
 CRITICAL: 
 - If the user just gave you data (like a salary, loan, or asset), FIRST confirm exactly what you updated in their profile.
-- If they are frustrated, be empathetic but stay focused on the numbers.
+- If they are frustrated or just chatting, be empathetic and conversational.
 - Income/Expenses are MONTHLY. Assets/Loans are TOTAL BALANCES.
+${onboardingCtx}
 
 FORMATTING RULES:
 - Use clear sections with bold headers like **📊 Your Numbers** 

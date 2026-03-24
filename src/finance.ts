@@ -133,14 +133,14 @@ export const finance = {
 
     const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
-    if (sr < 10 && profile.income > 0) nudges.push('⚠️ Your savings rate is below 10%. Target is 20%+.');
-    if (sr >= 20) nudges.push('✅ Great savings rate! Make sure this money is being invested.');
-    if (dr > 6) nudges.push('🚨 Your debt is ' + dr.toFixed(1) + 'x your monthly income — this is high.');
-    if (profile.assets.cash < (profile.expenses * 3) && profile.income > 0) nudges.push('⚠️ Emergency fund is low. Build up 6 months of expenses (' + fmt(profile.expenses * 6) + ').');
+    if (sr < 10 && profile.income > 0) nudges.push('⚠️ Your savings rate is below 10%. Target is 20%+. Try reducing lifestyle expenses.');
+    if (sr >= 20) nudges.push('✅ Great savings rate! Make sure this money is being invested, not just sitting in cash.');
+    if (dr > 6) nudges.push('🚨 Your debt is ' + dr.toFixed(1) + 'x your monthly income — this is high. Focus on paying off high-interest loans.');
+    if (profile.assets.cash < (profile.expenses * 3) && profile.income > 0) nudges.push('⚠️ Emergency fund is low. Build up 6 months of expenses (' + fmt(profile.expenses * 6) + ') in a liquid account.');
     if (surplus > 5000 && profile.assets.cash < profile.expenses * 6) nudges.push('💡 You have surplus of ' + fmt(surplus) + '/month — prioritise emergency fund first.');
-    if (collateral && this.totalLiabilities(profile) > 0 && highDebt && highDebt.rate > 11) nudges.push('💡 Your ' + collateral.name + ' can be used for a Loan Against Property at 8–10%, cheaper than your current debt.');
+    if (collateral && profile.loans.length > 0 && highDebt && highDebt.rate > 11) nudges.push('💡 Your ' + collateral.name + ' can be used for a Loan Against Property at 8–10%, cheaper than your current debt.');
     if (nw < 0) nudges.push('🚨 Net worth is negative. Debts exceed assets — focus on debt reduction.');
-    if (profile.goals.length === 0 && profile.income > 0) nudges.push('💡 No goals set. Define a financial goal to get a savings roadmap.');
+    if (profile.goals.length === 0 && profile.income > 0) nudges.push('💡 No goals set. Define a financial goal (e.g., "Save for a car") to get a savings roadmap.');
     if (!profile.riskProfile && profile.income > 0) nudges.push('💡 Tell me your risk appetite (conservative / moderate / aggressive) for investment advice.');
 
     return nudges.slice(0, 4);
