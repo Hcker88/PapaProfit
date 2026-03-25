@@ -1,12 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
 import { UserProfile } from './types';
 import { finance } from './finance';
-
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  console.warn("API Key is missing. Please set VITE_GEMINI_API_KEY in your .env file.");
-}
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export const insights = {
   async generateResponse(userMsg: string, parsedData: any, profile: UserProfile, chatHistory: { role: string; content: string }[], onboardingStep?: number, onboardingQuestions?: string[]): Promise<string> {
@@ -62,29 +55,16 @@ UPDATES JUST MADE: ${parsedData.updates.length > 0 ? parsedData.updates.join(', 
 
 Premium Status: ${profile.isPremium ? 'PRO USER - Give advanced investment and tax advice' : 'FREE USER - Do NOT give specific stock or advanced investment advice. Tell them to upgrade to Pro for personalized investment strategies if they ask.'}`;
 
-    let messages = chatHistory.slice(-6).map(h => ({
-      role: h.role === 'user' ? 'user' : 'model',
-      parts: [{ text: h.content }]
-    }));
-
-    // Gemini API requires the first message to be from the user
-    if (messages.length > 0 && messages[0].role === 'model') {
-      messages.shift();
-    }
-
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: messages,
-        config: {
-          systemInstruction: systemCtx,
-          temperature: 0.7,
-          maxOutputTokens: 600
-        }
+      const res = await fetch('/api/ai/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatHistory, systemCtx })
       });
-      return response.text || 'Sorry, I had trouble with that. Please try again.';
+      const data = await res.json();
+      return data.text || 'Sorry, I had trouble with that. Please try again.';
     } catch (error) {
-      console.error('Gemini error:', error);
+      console.error('AI Insights error:', error);
       return 'Sorry, I had trouble connecting to my brain. Please try again.';
     }
   }

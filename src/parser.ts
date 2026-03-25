@@ -1,11 +1,4 @@
-import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { UserProfile } from './types';
-
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  console.warn("API Key is missing. Please set VITE_GEMINI_API_KEY in your .env file.");
-}
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export const parser = {
   async parse(msg: string, currentProfile: UserProfile): Promise<{ intent: string; updates: string[]; amount: number; rate: number; months: number; newProfile: UserProfile }> {
@@ -18,193 +11,104 @@ export const parser = {
 
     const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
-    const schema: Schema = {
-      type: Type.OBJECT,
-      properties: {
-        intent: { type: Type.STRING, description: "The main intent of the user message (e.g., 'income', 'expense', 'savings', 'loan', 'asset', 'stock', 'goal', 'business', 'health', 'invest', 'tax', 'general')" },
-        extracted_data: {
-          type: Type.OBJECT,
-          properties: {
-            incomeSources: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING, description: "Name of the income source (e.g., 'Salary', 'Bonus', 'Side Income')" },
-                  value: { type: Type.NUMBER, description: "Monthly value" }
-                }
-              }
-            },
-            expenseCategories: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING, description: "Name of the expense category (e.g., 'Rent', 'Groceries', 'Bills', 'Lifestyle')" },
-                  value: { type: Type.NUMBER, description: "Monthly value" }
-                }
-              }
-            },
-            savings: { type: Type.NUMBER, description: "Savings amount mentioned" },
-            loan: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                amount: { type: Type.NUMBER },
-                rate: { type: Type.NUMBER }
-              }
-            },
-            asset: {
-              type: Type.OBJECT,
-              properties: {
-                type: { type: Type.STRING, description: "'property', 'gold', 'cash', or 'other'" },
-                name: { type: Type.STRING },
-                value: { type: Type.NUMBER }
-              }
-            },
-            stock: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                quantity: { type: Type.NUMBER },
-                buyPrice: { type: Type.NUMBER },
-                value: { type: Type.NUMBER, description: "Total value if quantity/buyPrice not specified" }
-              }
-            },
-            goal: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                targetAmount: { type: Type.NUMBER },
-                months: { type: Type.NUMBER }
-              }
-            },
-            riskProfile: { type: Type.STRING, description: "'conservative', 'moderate', or 'aggressive'" }
+    try {
+      const res = await fetch('/api/ai/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ msg })
+      });
+      const data = await res.json();
+      intent = data.intent || 'general';
+      const extracted = data.extracted_data || {};
+
+      if (extracted.incomeSources && extracted.incomeSources.length > 0) {
+        extracted.incomeSources.forEach((source: any) => {
+          const existing = newProfile.incomeSources.find(s => s.name.toLowerCase() === source.name.toLowerCase());
+          if (existing) {
+            existing.value = source.value;
+          } else {
+            newProfile.incomeSources.push(source);
           }
+          updates.push(`${source.name} updated to ${fmt(source.value)}`);
+        });
+        newProfile.income = newProfile.incomeSources.reduce((acc, s) => acc + s.value, 0);
+      }
+
+      if (extracted.expenseCategories && extracted.expenseCategories.length > 0) {
+        extracted.expenseCategories.forEach((cat: any) => {
+          const existing = newProfile.expenseCategories.find(c => c.name.toLowerCase() === cat.name.toLowerCase());
+          if (existing) {
+            existing.value = cat.value;
+          } else {
+            newProfile.expenseCategories.push(cat);
+          }
+          updates.push(`${cat.name} updated to ${fmt(cat.value)}`);
+        });
+        newProfile.expenses = newProfile.expenseCategories.reduce((acc, c) => acc + c.value, 0);
+      }
+      if (extracted.savings) {
+        newProfile.savings = extracted.savings;
+        amount = extracted.savings;
+        updates.push('savings updated to ' + fmt(extracted.savings));
+      }
+      if (extracted.loan && extracted.loan.amount) {
+        const existing = newProfile.loans.find(l => l.name === extracted.loan.name);
+        if (existing) {
+          existing.amount = extracted.loan.amount;
+          if (extracted.loan.rate) existing.rate = extracted.loan.rate;
+        } else {
+          newProfile.loans.push({ name: extracted.loan.name || 'Loan', amount: extracted.loan.amount, rate: extracted.loan.rate || 0, emi: 0 });
+        }
+        amount = extracted.loan.amount;
+        rate = extracted.loan.rate || 0;
+        updates.push(`${extracted.loan.name || 'Loan'} of ${fmt(extracted.loan.amount)} added`);
+      }
+      if (extracted.asset && extracted.asset.value) {
+        if (extracted.asset.type === 'property') {
+          newProfile.assets.property.push({ name: extracted.asset.name || 'Property', value: extracted.asset.value, mortgageable: true });
+        } else if (extracted.asset.type === 'gold') {
+          newProfile.assets.gold = extracted.asset.value;
+        } else if (extracted.asset.type === 'cash') {
+          newProfile.assets.cash = (newProfile.assets.cash || 0) + extracted.asset.value;
+        } else {
+          newProfile.assets.other.push({ name: extracted.asset.name || 'Asset', value: extracted.asset.value });
+        }
+        amount = extracted.asset.value;
+        updates.push(`${extracted.asset.name || extracted.asset.type} worth ${fmt(extracted.asset.value)} added`);
+      }
+      if (extracted.stock && extracted.stock.name) {
+        const qty = extracted.stock.quantity || 1;
+        const price = extracted.stock.buyPrice || extracted.stock.value || 0;
+        
+        if (price > 0) {
+          const newStock = {
+            symbol: extracted.stock.name.toUpperCase(),
+            name: extracted.stock.name,
+            quantity: qty,
+            buyPrice: price,
+            currentPrice: price
+          };
+          if (!newProfile.assets.stocks) newProfile.assets.stocks = [];
+          newProfile.assets.stocks.push(newStock);
+          amount = qty * price;
+          updates.push(`Stock/Investment ${extracted.stock.name} added to portfolio`);
         }
       }
-    };
-
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `You are a financial data extractor. Parse the user message and extract ALL financial entities.
-        
-        RULES:
-        - Income/Expenses are ALWAYS MONTHLY.
-        - Assets/Loans/Savings are ALWAYS TOTAL/CURRENT BALANCE.
-        - Convert 'k' to 1000, 'lakh' to 100000, 'cr' to 10000000.
-        
-        EXTRACT THESE:
-        1. incomeSources: {name, value} (Monthly)
-        2. expenseCategories: {name, value} (Monthly)
-        3. savings: total current balance
-        4. loan: {name, amount, rate} (Total outstanding)
-        5. asset: {type: 'property'|'gold'|'cash'|'other', name, value} (Total current value)
-        6. stock: {name, quantity, buyPrice, value} (Use value if quantity/buyPrice not given)
-        
-        Message: "${msg}"`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: schema,
-          temperature: 0.1
+      if (extracted.goal && extracted.goal.name) {
+        const existing = newProfile.goals.find(g => g.name === extracted.goal.name);
+        if (!existing) {
+          newProfile.goals.push({ name: extracted.goal.name, target: extracted.goal.targetAmount || 0, saved: 0, months: extracted.goal.months || 60 });
+          updates.push('Goal added: ' + extracted.goal.name);
         }
-      });
-
-      if (response.text) {
-        const parsed = JSON.parse(response.text);
-        intent = parsed.intent || 'general';
-        const data = parsed.extracted_data || {};
-
-        if (data.incomeSources && data.incomeSources.length > 0) {
-          data.incomeSources.forEach((source: any) => {
-            const existing = newProfile.incomeSources.find(s => s.name.toLowerCase() === source.name.toLowerCase());
-            if (existing) {
-              existing.value = source.value;
-            } else {
-              newProfile.incomeSources.push(source);
-            }
-            updates.push(`${source.name} updated to ${fmt(source.value)}`);
-          });
-          newProfile.income = newProfile.incomeSources.reduce((acc, s) => acc + s.value, 0);
-        }
-
-        if (data.expenseCategories && data.expenseCategories.length > 0) {
-          data.expenseCategories.forEach((cat: any) => {
-            const existing = newProfile.expenseCategories.find(c => c.name.toLowerCase() === cat.name.toLowerCase());
-            if (existing) {
-              existing.value = cat.value;
-            } else {
-              newProfile.expenseCategories.push(cat);
-            }
-            updates.push(`${cat.name} updated to ${fmt(cat.value)}`);
-          });
-          newProfile.expenses = newProfile.expenseCategories.reduce((acc, c) => acc + c.value, 0);
-        }
-        if (data.savings) {
-          newProfile.savings = data.savings;
-          amount = data.savings;
-          updates.push('savings updated to ' + fmt(data.savings));
-        }
-        if (data.loan && data.loan.amount) {
-          const existing = newProfile.loans.find(l => l.name === data.loan.name);
-          if (existing) {
-            existing.amount = data.loan.amount;
-            if (data.loan.rate) existing.rate = data.loan.rate;
-          } else {
-            newProfile.loans.push({ name: data.loan.name || 'Loan', amount: data.loan.amount, rate: data.loan.rate || 0, emi: 0 });
-          }
-          amount = data.loan.amount;
-          rate = data.loan.rate || 0;
-          updates.push(`${data.loan.name || 'Loan'} of ${fmt(data.loan.amount)} added`);
-        }
-        if (data.asset && data.asset.value) {
-          if (data.asset.type === 'property') {
-            newProfile.assets.property.push({ name: data.asset.name || 'Property', value: data.asset.value, mortgageable: true });
-          } else if (data.asset.type === 'gold') {
-            newProfile.assets.gold = data.asset.value;
-          } else if (data.asset.type === 'cash') {
-            newProfile.assets.cash = (newProfile.assets.cash || 0) + data.asset.value;
-          } else {
-            newProfile.assets.other.push({ name: data.asset.name || 'Asset', value: data.asset.value });
-          }
-          amount = data.asset.value;
-          updates.push(`${data.asset.name || data.asset.type} worth ${fmt(data.asset.value)} added`);
-        }
-        if (data.stock && data.stock.name) {
-          const qty = data.stock.quantity || 1;
-          const price = data.stock.buyPrice || data.stock.value || 0;
-          
-          if (price > 0) {
-            const newStock = {
-              symbol: data.stock.name.toUpperCase(),
-              name: data.stock.name,
-              quantity: qty,
-              buyPrice: price,
-              currentPrice: price
-            };
-            if (!newProfile.assets.stocks) newProfile.assets.stocks = [];
-            newProfile.assets.stocks.push(newStock);
-            amount = qty * price;
-            updates.push(`Stock/Investment ${data.stock.name} added to portfolio`);
-          }
-        }
-        if (data.goal && data.goal.name) {
-          const existing = newProfile.goals.find(g => g.name === data.goal.name);
-          if (!existing) {
-            newProfile.goals.push({ name: data.goal.name, target: data.goal.targetAmount || 0, saved: 0, months: data.goal.months || 60 });
-            updates.push('Goal added: ' + data.goal.name);
-          }
-          amount = data.goal.targetAmount || 0;
-          months = data.goal.months || 0;
-        }
-        if (data.riskProfile) {
-          newProfile.riskProfile = data.riskProfile as 'conservative' | 'moderate' | 'aggressive';
-          updates.push(`Risk profile: ${data.riskProfile}`);
-        }
+        amount = extracted.goal.targetAmount || 0;
+        months = extracted.goal.months || 0;
+      }
+      if (extracted.riskProfile) {
+        newProfile.riskProfile = extracted.riskProfile as 'conservative' | 'moderate' | 'aggressive';
+        updates.push(`Risk profile: ${extracted.riskProfile}`);
       }
     } catch (e) {
-      console.error("Gemini parsing failed, using regex fallback", e);
+      console.error("Server parsing failed, using regex fallback", e);
       
       // Basic Regex Fallback for common patterns
       const parseNum = (s: string) => {

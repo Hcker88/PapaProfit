@@ -10,6 +10,8 @@ import { Portfolio } from './components/Portfolio';
 import { FinancialSourceEditor } from './components/FinancialSourceEditor';
 import { investments } from './investments';
 
+import DOMPurify from 'dompurify';
+
 const DEFAULT_PROFILE: UserProfile = {
   income: 0,
   incomeSources: [],
@@ -38,8 +40,6 @@ export default function App() {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const apiKeyMissing = !(import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY);
-
   const ONBOARDING_QUESTIONS = [
     "Hi! I'm your PapaProfit AI. Let's get your profile set up. First, what's your monthly **Salary**?",
     "Got it. Do you have any **Bonuses** or other regular income?",
@@ -56,6 +56,9 @@ export default function App() {
       if (currentUser) {
         setLoginError(null);
         await loadProfile(currentUser.uid);
+      } else {
+        setChatHistory([]);
+        setProfile(DEFAULT_PROFILE);
       }
     });
     return () => unsubscribe();
@@ -64,15 +67,18 @@ export default function App() {
   // Add welcome message or start onboarding
   useEffect(() => {
     if (user && chatHistory.length === 0) {
-      if (!profile.onboardingCompleted) {
-        setChatHistory([{ role: 'ai', content: ONBOARDING_QUESTIONS[0] }]);
-        setOnboardingStep(1);
-      } else {
-        const welcomeMsg = `**Welcome back to PapaProfit, ${user.displayName?.split(' ')[0]}! 👋**\n\nI'm ready to help you manage your finances. Your current net worth is **₹${finance.netWorth(profile).toLocaleString('en-IN')}**.\n\nWhat would you like to focus on today?`;
-        setChatHistory([{ role: 'ai', content: welcomeMsg }]);
-      }
+      setChatHistory(prev => {
+        if (prev.length > 0) return prev;
+        if (!profile.onboardingCompleted) {
+          setOnboardingStep(1);
+          return [{ role: 'ai', content: ONBOARDING_QUESTIONS[0] }];
+        } else {
+          const welcomeMsg = `**Welcome back to PapaProfit, ${user.displayName?.split(' ')[0]}! 👋**\n\nI'm ready to help you manage your finances. Your current net worth is **₹${finance.netWorth(profile).toLocaleString('en-IN')}**.\n\nWhat would you like to focus on today?`;
+          return [{ role: 'ai', content: welcomeMsg }];
+        }
+      });
     }
-  }, [user, profile.onboardingCompleted, chatHistory.length]);
+  }, [user, profile.onboardingCompleted]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -115,10 +121,12 @@ export default function App() {
   const saveProfile = async (newProfile: UserProfile) => {
     if (!user) return;
     try {
+      // Filter out isPremium from client-side save to prevent abuse
+      const { isPremium, ...profileToSave } = newProfile;
       await setDoc(doc(db, 'users', user.uid), {
         name: user.displayName,
         email: user.email,
-        profile: newProfile,
+        profile: profileToSave,
         lastUpdated: new Date().toISOString()
       }, { merge: true });
     } catch (error) {
@@ -144,7 +152,18 @@ export default function App() {
 
   const formatAIResponse = (text: string) => {
     if (!text) return '';
-    return text
+    
+    // 1. Escape HTML to prevent XSS
+    const escapeHTML = (str: string) => {
+      const p = document.createElement('p');
+      p.textContent = str;
+      return p.innerHTML;
+    };
+
+    const escapedText = escapeHTML(text);
+
+    // 2. Apply custom formatting
+    const html = escapedText
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n\n/g, '<br/><br/>')
       .replace(/\n/g, '<br/>')
@@ -153,6 +172,9 @@ export default function App() {
       .replace(/# (.*?)/g, '<span class="section-head">$1</span>')
       .replace(/• (.*?)/g, '&bull; $1')
       .replace(/- (.*?)/g, '&bull; $1');
+    
+    // 3. Sanitize the final HTML
+    return DOMPurify.sanitize(html);
   };
 
   const fmt = (n: number) => {
@@ -261,12 +283,6 @@ export default function App() {
       <div className="topbar">
         <div className="topbar-logo">PapaProfit</div>
         <div className="topbar-right">
-          {apiKeyMissing && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1">
-              <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
-              API Key Missing
-            </div>
-          )}
           <div className="fhs-badge" onClick={() => setShowProfile(!showProfile)}>
             <div className="fhs-dot" style={{ background: fhsInfo.cls === 'good' ? '#1a7a4a' : fhsInfo.cls === 'ok' ? '#d4851a' : '#c0392b' }}></div>
             <span>FHS: <strong>{fhsScore !== null ? fhsScore : '--'}</strong></span>
@@ -513,12 +529,28 @@ export default function App() {
             </div>
             
             <button 
-              onClick={() => {
-                const newProfile = { ...profile, isPremium: true };
-                setProfile(newProfile);
-                saveProfile(newProfile);
-                setShowPremiumModal(false);
-                setChatHistory(prev => [...prev, { role: 'ai', content: '🎉 **Welcome to PapaProfit Pro!** You now have access to personalized investment recommendations and advanced analytics. Let me know if you want to explore your new features!' }]);
+              onClick={async () => {
+                if (!user) return;
+                try {
+                  const idToken = await user.getIdToken();
+                  const res = await fetch('/api/premium/upgrade', {
+                    method: 'POST',
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${idToken}`
+                    }
+                  });
+                  if (res.ok) {
+                    setProfile(prev => ({ ...prev, isPremium: true }));
+                    setShowPremiumModal(false);
+                    setChatHistory(prev => [...prev, { role: 'ai', content: '🎉 **Welcome to PapaProfit Pro!** You now have access to personalized investment recommendations and advanced analytics. Let me know if you want to explore your new features!' }]);
+                  } else {
+                    alert("Failed to upgrade. Please try again.");
+                  }
+                } catch (e) {
+                  console.error("Upgrade failed:", e);
+                  alert("Upgrade failed. Please try again.");
+                }
               }}
               className="w-full bg-[#1a7a4a] text-white py-3 rounded-xl font-semibold hover:bg-[#145c37] transition-colors"
             >
