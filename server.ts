@@ -13,8 +13,9 @@ dotenv.config();
 const yahooFinance = new YahooFinance();
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+const appUrl = process.env.APP_URL || 'http://localhost:3000/';
 console.log('GEMINI_API_KEY present:', !!process.env.GEMINI_API_KEY);
-console.log('VITE_GEMINI_API_KEY present:', !!process.env.VITE_GEMINI_API_KEY);
+console.log('APP_URL:', appUrl);
 const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 let firestore: any;
